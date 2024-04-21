@@ -1,46 +1,50 @@
 import React, { useState, useEffect } from "react";
 import { Box, TextField, Button } from "@mui/material";
 import MessageList from "./MessageList";
-import io from "socket.io-client";
-
-const socket = io("http://localhost:4000"); // URL of your WebSocket server
+import Header from "./Header";
+import useSocket from "../hooks/socketHooks";
 
 function ChatRoom() {
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([]);
+  const [chatHistory, setChatHistory] = useState([]);
+  const { sendMessage, onMessage } = useSocket("http://localhost:4000");
 
   useEffect(() => {
-    socket.on("chatMessage", (msg) => {
-      setMessages((messages) => [...messages, msg]);
+    const disconnectMethod = onMessage((newMessage) => {
+      setChatHistory((history) => [...history, newMessage]);
     });
 
-    // Cleanup on component unmount
-    return () => {
-      socket.off("chatMessage");
-    };
-  }, []);
+    return disconnectMethod; // Cleanup
+  }, [onMessage]); // Resubscribe to onMessage if it ever changes
 
   const handleSend = () => {
-    if (message) {
-      socket.emit("chatMessage", message);
+    if (message.trim().length > 0) {
+      sendMessage(message);
       setMessage("");
+    } else {
+      console.log("Error: Input field must be populated");
     }
   };
 
   return (
     <Box sx={{ padding: 3 }}>
-      <h1>Chat Room</h1>
-      <MessageList messages={messages} />
+      <Header />
+      <MessageList messages={chatHistory} />
       <TextField
         fullWidth
         label="Type your message here..."
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        onKeyPress={(e) => (e.key === "Enter" ? handleSend() : null)}
+        onKeyDown={(e) => (e.key === "Enter" ? handleSend() : null)}
         variant="outlined"
         margin="normal"
       />
-      <Button variant="contained" color="primary" onClick={handleSend}>
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={handleSend}
+        disabled={message.trim() <= 0}
+      >
         Send
       </Button>
     </Box>
