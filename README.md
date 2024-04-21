@@ -1,4 +1,4 @@
-# chatbot
+# chatroom
 ## setup
 Install all deps
 ```
